@@ -103,7 +103,6 @@ function doTheThing() {
 		useTacticalNukeIfRelevant();
 		useCrippleSpawnerIfRelevant();
 		useMetalDetectorIfRelevant();
-		useGoldRainIfRelevant();
 		attemptRespawn();
 
 		if(autoClickGoldRain) {
@@ -319,7 +318,8 @@ function useClusterBombIfRelevant() {
 		}
 		//Bombs away if spawner and 2+ other monsters
 		if (enemySpawnerExists && enemyCount >= 3) {
-			triggerAbility(ABILITIES.CLUSTER_BOMB);
+			console.log('Cluster Bomb is available and cooled. Drop it!');
+                        triggerAbility(ABILITIES.CLUSTER_BOMB);
 		}
 	}
 }
@@ -347,7 +347,8 @@ function useNapalmIfRelevant() {
 		}
 		//Burn them all if spawner and 2+ other monsters
 		if (enemySpawnerExists && enemyCount >= 3) {
-			triggerAbility(ABILITIES.NAPALM);
+                        console.log('Napalm is available, ready, and needed. BURN!');
+                        triggerAbility(ABILITIES.NAPALM);
 		}
 	}
 }
@@ -375,7 +376,8 @@ function useMoraleBoosterIfRelevant() {
 		}
 		//Hype everybody up!
 		if (enemySpawnerExists && enemyCount >= 3) {
-			triggerAbility(5);
+			console.log("Hype everybody up!");
+                        triggerAbility(5);
 		}
 	}
 }
