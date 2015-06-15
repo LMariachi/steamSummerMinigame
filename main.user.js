@@ -25,6 +25,7 @@
 //                                                       //
 ///////////////////////////////////////////////////////////
 
+
 var isAlreadyRunning = false;
 var autoClickGoldRain = true;
 
