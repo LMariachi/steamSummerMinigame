@@ -393,12 +393,12 @@ function purchaseUpgrades() {
 					highestUpgradeValueForArmor = upgrade.multiplier / upgradeCost;
 				}
 				break;
-			case UPGRADE_TYPES.CLICK_DAMAGE:
-				if(avgClicksPerSecond * upgrade.multiplier / upgradeCost > highestUpgradeValueForDamage) { // dmg increase per moneys
-					bestUpgradeForDamage = i;
-					highestUpgradeValueForDamage = avgClicksPerSecond * upgrade.multiplier / upgradeCost;
-				}
-				break;
+//			case UPGRADE_TYPES.CLICK_DAMAGE:
+//				if(avgClicksPerSecond * upgrade.multiplier / upgradeCost > highestUpgradeValueForDamage) { // dmg increase per moneys
+//					bestUpgradeForDamage = i;
+//					highestUpgradeValueForDamage = avgClicksPerSecond * upgrade.multiplier / upgradeCost;
+//				}
+//				break;
 			case UPGRADE_TYPES.DPS:
 				if(upgrade.multiplier / upgradeCost > highestUpgradeValueForDamage) { // dmg increase per moneys
 					bestUpgradeForDamage = i;
