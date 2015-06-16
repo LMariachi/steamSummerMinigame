@@ -28,9 +28,9 @@
 
 var isAlreadyRunning = false;
 var autoClickGoldRain = true;
-var purchaseUpgradeToggle = true;
+var purchaseUpgradeToggle = false;
 
-var clickRate = 10; // change to number of desired clicks per second
+var clickRate = 13; // change to number of desired clicks per second
 var timer = 0;
 var lastAction = 500; //start with the max. Array length
 var clickTimer;
@@ -97,9 +97,9 @@ if (thingTimer){
 
 function firstRun() {
 	// if the purchase item window is open, spend your badge points!
-	if (g_Minigame.CurrentScene().m_UI.m_spendBadgePointsDialog.is(":visible")) {
-		purchaseBadgeItems();
-	}
+//	if (g_Minigame.CurrentScene().m_UI.m_spendBadgePointsDialog.is(":visible")) {
+//		purchaseBadgeItems();
+//	}
 
 	// disable particle effects - this drastically reduces the game's memory leak
 	if (g_Minigame !== undefined) {
@@ -363,7 +363,7 @@ function goToLaneWithBestTarget() {
 
 function purchaseUpgrades() {
 	var oddsOfElement = 1 - (0.75*0.75*0.75); //This values elemental too much because best element lanes are not focused(0.578)
-	var avgClicksPerSecond = 1;	//Set this yourself to serve your needs
+	var avgClicksPerSecond = 0;	//Set this yourself to serve your needs
 	
 	var upgrades = g_Minigame.CurrentScene().m_rgTuningData.upgrades.slice(0);
 
