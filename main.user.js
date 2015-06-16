@@ -1,7 +1,7 @@
 // ==UserScript== 
 // @name Monster Minigame AutoScript
 // @author /u/mouseasw for creating and maintaining the script, /u/WinneonSword for the Greasemonkey support, and every contributor on the GitHub repo for constant enhancements.
-// @version 2.3.7
+// @version 2.4.0
 // @namespace https://github.com/mouseas/steamSummerMinigame
 // @description A script that runs the Steam Monster Minigame for you.
 // @match *://steamcommunity.com/minigame/towerattack*
@@ -926,32 +926,28 @@ function clickTheThing() {
 			}
 		}
 	);
-	timer = timer - 1;
+	
+	timer--;
+	
+	// clear the click timer if it's done.
+	if (timer <= 0){
+		clearInterval(clickTimer);
+		console.log('It has stopped raining.');
+		timer = 0;
+	}
 }
 
 function startGoldRainClick() {
-	var actions = g_Minigame.CurrentScene().m_rgActionLog;
-	if(lastAction > actions.length){
-		lastAction = actions.length;
-	}
+	var activeAbilities = g_Minigame.CurrentScene().m_rgLaneData[g_Minigame.CurrentScene().m_nExpectedLane].abilities;
 	
-	if(actions.length > lastAction){
-		for (var i = lastAction; i < actions.length; i++) {
-			//console.log(actions[i].ability + " " + actions[i].type);
-			if(actions[i].ability == 17 && actions[i].type == 'ability'){
-				clearInterval(clickTimer);
-				timer = 0;
-				console.log('Let the GOLD rain!');
-				clickTimer = window.setInterval(clickTheThing, 1000 / clickRate);
-				timer = 150;
-			}
-		}
-		lastAction = i;
-	}
-	
-	if(timer <= 0){
+	// check if the current lane has Gold Rain active
+	if (activeAbilities[ITEMS.GOLD_RAIN] !== undefined) {
 		clearInterval(clickTimer);
-		timer = 0;
+		if (timer <= 0) {
+			console.log('Let the GOLD rain!');
+		}
+		clickTimer = window.setInterval(clickTheThing, 1000 / clickRate);
+		timer = clickRate * 2; // click for 2 seconds; this will be topped off as long as Gold Rain is still active.
 	}
 }
 
