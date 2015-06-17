@@ -141,7 +141,7 @@ function doTheThing() {
 		useMedicsIfRelevant();
 		useMoraleBoosterIfRelevant();
 		useClusterBombIfRelevant();
-		useNapalmIfRelevant();
+//		useNapalmIfRelevant();
 		useTacticalNukeIfRelevant();
 		useCrippleSpawnerIfRelevant();
 		useMetalDetectorAndTreasureIfRelevant();
@@ -827,7 +827,8 @@ function useCritIfRelevant() {
 function attemptRespawn() {
 	if ((g_Minigame.CurrentScene().m_bIsDead) && 
 			((g_Minigame.CurrentScene().m_rgPlayerData.time_died) + 5) < (g_Minigame.CurrentScene().m_nTime)) {
-		RespawnPlayer();
+		console.log('RISE! Back to this world of toil and woe!');
+                RespawnPlayer();
 	}
 }
 
