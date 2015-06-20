@@ -27,6 +27,8 @@ powerups for you.
 	- Gold Rain if facing a Boss who has more than 60% health
 - Respawns you after 5 seconds (instead of 1 minute) if you die
 - Disables certain abilities and items if facing a Boss (to try to maximize Raining Gold and Metal Detector benefits)
+- Auto-clicks if the current lane has Raining Gold active
+- Adds UI elements to adjust some settings
 
 ## Installation ##
 
@@ -56,6 +58,14 @@ powerups for you.
 2. Select All, Copy.
 3. Navigate to `http://steamcommunity.com/minigame/` and join or start a game.
 4. Press `F12` and navigate to the `Console` tab.
+5. Paste into the javascript input, and hit `Enter`.
+
+##### Safari #####
+1. Make sure you have `Show Develop menu in menu bar` checked in Preferences - Advanced.
+2. Open `main.user.js` in a text editor.
+2. Select All, Copy.
+3. Navigate to `http://steamcommunity.com/minigame/` and join or start a game.
+4. Press `⌘  + Opt + I`.
 5. Paste into the javascript input, and hit `Enter`.
 
 To stop the manual script, type `window.clearTimeout(thingTimer);` into the console and hit `Enter`.

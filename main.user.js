@@ -1,7 +1,7 @@
 // ==UserScript== 
 // @name Monster Minigame AutoScript
 // @author /u/mouseasw for creating and maintaining the script, /u/WinneonSword for the Greasemonkey support, and every contributor on the GitHub repo for constant enhancements.
-// @version 2.4.0
+// @version 2.4.3
 // @namespace https://github.com/mouseas/steamSummerMinigame
 // @description A script that runs the Steam Monster Minigame for you.
 // @match *://steamcommunity.com/minigame/towerattack*
@@ -23,22 +23,24 @@
 //   Greasemonkey / Tampermonkey users will NOT update   //
 //                    automatically!!                    //
 //                                                       //
+//    Do not update version number in pull requests;     //
+//         It usually causes a merge conflict.           //
+//                                                       //
 ///////////////////////////////////////////////////////////
 
-
-var isAlreadyRunning = false;
 var autoClickGoldRain = true;
-var purchaseUpgradeToggle = true;
+var clickRate = 13; // change to number of desired clicks per second
 
-var clickRate = 10; // change to number of desired clicks per second
+// Options. Can also be set in the options menu below game.
+var purchaseUpgradeToggle = false;
+var clickRate = 13; // change to number of desired clicks per second
+
+// Do not touch these
+var isAlreadyRunning = false;
 var timer = 0;
 var lastAction = 500; //start with the max. Array length
 var clickTimer;
 var purchasedShieldsWhileRespawning = false;
-
-var avgClickRate = 5; // to keep track of the average clicks per second that the game actually records
-var totalClicksPastFiveSeconds = avgClickRate * 5; // keeps track of total clicks over the past 5 seconds for a moving average
-var previousTickTime = 0; // tracks the last time we received an update from the game
 
 var ABILITIES = {
 	"MORALE_BOOSTER": 5,
@@ -97,9 +99,10 @@ if (thingTimer){
 
 function firstRun() {
 	// if the purchase item window is open, spend your badge points!
-	if (g_Minigame.CurrentScene().m_UI.m_spendBadgePointsDialog.is(":visible")) {
-		purchaseBadgeItems();
-	}
+//	if (g_Minigame.CurrentScene().m_UI.m_spendBadgePointsDialog.is(":visible")) {
+//		purchaseBadgeItems();
+//	}
+//	createOptionsMenu();
 
 	// disable particle effects - this drastically reduces the game's memory leak
 	if (g_Minigame !== undefined) {
@@ -117,31 +120,41 @@ function firstRun() {
 		CEnemySpawner.prototype.TakeDamage = function() {};
 		CEnemyBoss.prototype.TakeDamage = function() {};
 	}
+	
+	// flat disable Throw Money At Screen item - it causes more harm than benefit in every conceivable case
+	disableAbilityItem(ITEMS.THROW_MONEY);
 }
 
 function doTheThing() {
 	if (!isAlreadyRunning){
 		isAlreadyRunning = true;
 
-		goToLaneWithBestTarget();
+		try {
+			goToLaneWithBestTarget();
 
-		if (purchaseUpgradeToggle){
-			purchaseUpgrades();
-		}
+			if (purchaseUpgradeToggle){
+				purchaseUpgrades();
+			}
 
-		useGoodLuckCharmIfRelevant();
-		useCritIfRelevant();
-		useMedicsIfRelevant();
-		useMoraleBoosterIfRelevant();
-		useClusterBombIfRelevant();
-		useNapalmIfRelevant();
-		useTacticalNukeIfRelevant();
-		useCrippleSpawnerIfRelevant();
-		useMetalDetectorIfRelevant();
-		attemptRespawn();
+			useGoodLuckCharmIfRelevant();
+			useCritIfRelevant();
+			useReviveIfRelevant();
+			useMedicsIfRelevant();
+			useMoraleBoosterIfRelevant();
+			useClusterBombIfRelevant();
+//			useNapalmIfRelevant();
+			useTacticalNukeIfRelevant();
+			useCrippleSpawnerIfRelevant();
+			useMetalDetectorAndTreasureIfRelevant();
+//			useGoldRainIfRelevant();
+			attemptRespawn();
 
-		if(autoClickGoldRain) {
-			startGoldRainClick();
+			if (clickRate > 0) {
+				startGoldRainClick();
+			}
+		} catch (e) {
+			console.log("An error occurred, but we'll keep running.");
+			console.log(e);
 		}
 
 		isAlreadyRunning = false;
@@ -155,11 +168,11 @@ function purchaseBadgeItems() {
 	// http://www.reddit.com/r/Steam/comments/39i0qc/psa_how_the_monster_game_works_an_indepth/
 	var abilityItemPriority = [
 		[ITEMS.GOLD_RAIN, 50],
-		[ITEMS.CRIPPLE_MONSTER, 10],
-		[ITEMS.CRIPPLE_SPAWNER, 8],
-		[ITEMS.MAXIMIZE_ELEMENT, 7],
-		[ITEMS.CRIT, 5],
-		[ITEMS.TREASURE, 5],
+		[ITEMS.CRIT, 20],
+		[ITEMS.TREASURE, 6],
+		[ITEMS.MAXIMIZE_ELEMENT, 5],
+		[ITEMS.CRIPPLE_MONSTER, 5],
+		[ITEMS.CRIPPLE_SPAWNER, 5],
 		[ITEMS.REVIVE, 5],
 		[ITEMS.STEAL_HEALTH, 4],
 		[ITEMS.GOD_MODE, 3],
@@ -363,7 +376,7 @@ function goToLaneWithBestTarget() {
 
 function purchaseUpgrades() {
 	var oddsOfElement = 1 - (0.75*0.75*0.75); //This values elemental too much because best element lanes are not focused(0.578)
-	var avgClicksPerSecond = 1;	//Set this yourself to serve your needs
+	var avgClicksPerSecond = 0;	//Set this yourself to serve your needs
 	
 	var upgrades = g_Minigame.CurrentScene().m_rgTuningData.upgrades.slice(0);
 
@@ -485,18 +498,60 @@ function purchaseUpgrades() {
 	
 	// Try to buy some damage
 	upgradeCost = g_Minigame.CurrentScene().GetUpgradeCost(bestUpgradeForDamage);
+	var upgradeCostBestArmor = g_Minigame.CurrentScene().GetUpgradeCost(bestUpgradeForArmor);
 
-	if(myGold > upgradeCost && bestUpgradeForDamage !== undefined) {
+	if(myGold - upgradeCostBestArmor > upgradeCost && bestUpgradeForDamage !== undefined) {
 		buyUpgrade(bestUpgradeForDamage);
 	}
 }
 
-function useMedicsIfRelevant() {
-	var myMaxHealth = g_Minigame.CurrentScene().m_rgPlayerTechTree.max_hp;
+function useReviveIfRelevant() {
+	// Use resurrection if doable
+	if (numItem(ITEMS.REVIVE) === 0 || isAbilityCoolingDown(ITEMS.REVIVE)) {
+		return;
+	}
 	
-	// check if health is below 50%
-	var hpPercent = g_Minigame.CurrentScene().m_rgPlayerData.hp / myMaxHealth;
-	if (hpPercent > 0.5 || g_Minigame.CurrentScene().m_rgPlayerData.hp < 1) {
+	var currentLane = g_Minigame.CurrentScene().m_nExpectedLane;
+	// Check if anyone needs reviving
+	var numDead = g_Minigame.CurrentScene().m_rgGameData.lanes[ currentLane ].player_hp_buckets[0];
+	var numPlayers = g_Minigame.CurrentScene().m_rgLaneData[ currentLane ].players;
+	var numRevives = currentLaneHasAbility(ABILITIES.REVIVE);
+
+	if (numPlayers === 0)
+		return; // no one alive, apparently
+	
+	var deadPercent = numDead / numPlayers;
+
+	// If it was recently used in current lane, don't bother ('instants' take a few seconds to
+	// register and last for 5 seconds). Also skip if number of dead players < 1/3 of lane team or
+	// lane consists of < 20% of total team players.
+	if (numRevives === 0 && deadPercent > 0.33 && getLanePercent() > 0.2) {
+		console.log('We have revive, cooled down, and needed. Trigger it.');
+		triggerItem(ITEMS.REVIVE);
+	}
+}
+
+function useMedicsIfRelevant() {
+	var currentLane = g_Minigame.CurrentScene().m_nExpectedLane;
+	var HPbuckets = g_Minigame.CurrentScene().m_rgGameData.lanes[ currentLane ].player_hp_buckets;
+	var playersAlive = g_Minigame.CurrentScene().m_rgLaneData[ currentLane ].players - HPbuckets[0];
+	
+	// Get players between health buckets 2 and 6 of 10 (0 means dead).
+	var playersInjured = HPbuckets.slice(1,6).reduce(function(a, b) {return a + b});
+
+	if (playersAlive === 0)
+		return;
+	
+	var injuredPercent = playersInjured / playersAlive;
+	
+	// Check if medic is already active, health is below 50%,
+	// lane consists of > 20 % of total team players, or if really hurt players > 40%
+	var myHP = g_Minigame.CurrentScene().m_rgPlayerData.hp;
+	var myMaxHealth = g_Minigame.CurrentScene().m_rgPlayerTechTree.max_hp;
+	var hpPercent = myHP / myMaxHealth;
+	if (currentLaneHasAbility(ABILITIES.MEDIC) > 0 ||
+		( (hpPercent > 0.5 || myHP < 1) &&
+		  (getLanePercent() < 0.2 || injuredPercent < 0.4) )) {
 		return; // no need to heal - HP is above 50% or already dead
 	}
 	
@@ -511,7 +566,8 @@ function useMedicsIfRelevant() {
 		// Medics is purchased, cooled down, and needed. Trigger it.
 		console.log('Medics is purchased, cooled down, and needed. Trigger it.');
 		triggerAbility(ABILITIES.MEDIC);
-	} else if (numItem(ITEMS.GOD_MODE) > 0 && !isAbilityCoolingDown(ITEMS.GOD_MODE)) {
+	} else if (hpPercent <= 0.5 && myHP > 0 && numItem(ITEMS.GOD_MODE) > 0 && !isAbilityCoolingDown(ITEMS.GOD_MODE)) {
+		// Only use on yourself, not if others need healing.
 		// Don't have Medic or Pumped Up? 
 		// We'll use godmode so we can delay our death in case the cooldowns come back.
 		// Instead of just firing it, we could maybe only use godmode
@@ -689,20 +745,21 @@ function useTacticalNukeIfRelevant() {
 	}
 }
 
-function useMetalDetectorIfRelevant() {
-	if (hasPurchasedAbility(ABILITIES.METAL_DETECTOR)) {
-		if (isAbilityCoolingDown(ABILITIES.METAL_DETECTOR)) {
-			return;
-		}
+function useMetalDetectorAndTreasureIfRelevant() {
 
-		var enemy = g_Minigame.m_CurrentScene.GetEnemy(g_Minigame.m_CurrentScene.m_rgPlayerData.current_lane, g_Minigame.m_CurrentScene.m_rgPlayerData.target);
+	var enemy = g_Minigame.m_CurrentScene.GetEnemy(g_Minigame.m_CurrentScene.m_rgPlayerData.current_lane, g_Minigame.m_CurrentScene.m_rgPlayerData.target);
 
-		if (enemy && enemy.m_data.type == ENEMY_TYPE.BOSS) {
-			var enemyBossHealthPercent = enemy.m_flDisplayedHP / enemy.m_data.max_hp;
+	if (enemy && enemy.m_data.type == ENEMY_TYPE.BOSS) {
+		var enemyBossHealthPercent = enemy.m_flDisplayedHP / enemy.m_data.max_hp;
 
-			if (enemyBossHealthPercent < 0.3 ) {
+		if (enemyBossHealthPercent < 0.3) {
+			if (hasPurchasedAbility(ABILITIES.METAL_DETECTOR) && !isAbilityCoolingDown(ABILITIES.METAL_DETECTOR)) {
 				console.log('Metal detector is purchased and cooled down, Triggering it on boss');
 				triggerAbility(ABILITIES.METAL_DETECTOR);
+			}
+			if (numItem(ITEMS.TREASURE) && !isAbilityCoolingDown(ITEMS.TREASURE)) {
+				console.log('Treasure! is purchased and cooled down, Triggering it on boss');
+				triggerItem(ITEMS.TREASURE);
 			}
 		}
 	}
@@ -731,7 +788,7 @@ function useCrippleSpawnerIfRelevant() {
 		}
 
 		// If there is a spawner and it's health is above 95%, cripple it!
-		if (enemySpawnerExists && enemySpawnerHealthPercent > 0.95) {
+		if (enemySpawnerExists && enemySpawnerHealthPercent > 0.9 && Math.random() < 1/10) {
 			console.log("Cripple Spawner available, and needed. Cripple 'em.");
 			triggerItem(ITEMS.CRIPPLE_SPAWNER);
 		}
@@ -775,7 +832,8 @@ function useCritIfRelevant() {
 function attemptRespawn() {
 	if ((g_Minigame.CurrentScene().m_bIsDead) && 
 			((g_Minigame.CurrentScene().m_rgPlayerData.time_died) + 5) < (g_Minigame.CurrentScene().m_nTime)) {
-		RespawnPlayer();
+		console.log('RISE! Back to this world of toil and woe!');
+                RespawnPlayer();
 	}
 }
 
@@ -904,28 +962,42 @@ function currentLaneHasAbility(abilityID) {
 	return g_Minigame.m_CurrentScene.m_rgLaneData[lane].abilities[abilityID];
 }
 
+function getLanePercent(lane) {
+	// Gets the percentage of total players in current lane. Useful in deciding if an ability is worthwhile to use
+
+	lane = lane || g_Minigame.CurrentScene().m_nExpectedLane
+	var currentPlayers = g_Minigame.CurrentScene().m_rgLaneData[ lane ].players
+	var numPlayers = 0;
+	for (var i=0; i < g_Minigame.CurrentScene().m_rgGameData.lanes.length; i++) {
+		numPlayers += g_Minigame.CurrentScene().m_rgLaneData[ i ].players;
+	}
+	
+	if (numPlayers === 0)
+		return 0;
+
+	return currentPlayers / numPlayers;
+}
+
 function clickTheThing() {
 	// If we're going to be clicking, we should reset g_msTickRate
 	// There's a reddit thread about why and we might as well be safe
 	g_msTickRate = 1100;
 
-	g_Minigame.m_CurrentScene.DoClick(
-		{
-			data: {
-				getLocalPosition: function() {
-					var enemy = g_Minigame.m_CurrentScene.GetEnemy(
-						g_Minigame.m_CurrentScene.m_rgPlayerData.current_lane,
-						g_Minigame.m_CurrentScene.m_rgPlayerData.target);
-					var laneOffset = enemy.m_nLane * 440;
+	g_Minigame.m_CurrentScene.DoClick({
+		data: {
+			getLocalPosition: function () {
+				var enemy = g_Minigame.m_CurrentScene.GetEnemy(
+					g_Minigame.m_CurrentScene.m_rgPlayerData.current_lane,
+					g_Minigame.m_CurrentScene.m_rgPlayerData.target);
+				var laneOffset = enemy.m_nLane * 440;
 
-					return {
-						x: enemy.m_Sprite.position.x - laneOffset,
-						y: enemy.m_Sprite.position.y - 52
-					}
+				return {
+					x: enemy.m_Sprite.position.x - laneOffset,
+					y: enemy.m_Sprite.position.y - 52
 				}
 			}
 		}
-	);
+	});
 	
 	timer--;
 	
@@ -948,6 +1020,138 @@ function startGoldRainClick() {
 		}
 		clickTimer = window.setInterval(clickTheThing, 1000 / clickRate);
 		timer = clickRate * 2; // click for 2 seconds; this will be topped off as long as Gold Rain is still active.
+	}
+}
+
+function createOptionsMenu() {
+	// remove any existing options menu before adding a new one
+	jQuery('.options_box').remove();
+
+	// Remove the junk at the bottom to make room for options
+	node = document.getElementById("footer");
+	if (node && node.parentNode) {
+		node.parentNode.removeChild( node );
+	}
+	jQuery('.leave_game_helper').remove();
+	
+	// Make space for option menu
+	var options_menu = document.querySelector(".game_options");
+	var sfx_btn = document.querySelector(".toggle_sfx_btn");
+	sfx_btn.style.marginLeft = "2px";
+	sfx_btn.style.marginRight = "7px";
+	sfx_btn.style.cssFloat = "right";
+	sfx_btn.style.styleFloat = "right";
+	var music_btn = document.querySelector(".toggle_music_btn");
+	music_btn.style.marginRight = "2px";
+	music_btn.style.cssFloat = "right";
+	music_btn.style.styleFloat = "right";
+	var leave_btn = document.querySelector(".leave_game_btn");
+	leave_btn.style.marginRight = "2px";
+	leave_btn.style.cssFloat = "right";
+	leave_btn.style.styleFloat = "right";
+	
+	var pagecontent = document.querySelector(".pagecontent");
+	pagecontent.style.padding = "0";
+
+	var info_box = document.createElement('div');
+	options_menu.insertBefore(info_box, sfx_btn);
+
+	info_box.innerHTML = '<br><b>OPTIONS</b><hr>' + ((typeof GM_info !==  "undefined") ? ' (v' + GM_info.script.version + ')' : '');
+
+	// reset the CSS for the info box for aesthetics
+	info_box.className = "options_box";
+	info_box.style.backgroundColor = "#000000";
+	info_box.style.width = "300px";
+	info_box.style.padding = "12px";
+	info_box.style.boxShadow = "2px 2px 0 rgba( 0, 0, 0, 0.6 )";
+	info_box.style.color = "#ededed";
+	info_box.style.margin = "2px auto";
+	info_box.style.overflow = "auto";
+	info_box.style.cssFloat = "left";
+	info_box.style.styleFloat = "left";
+	
+	var options = document.createElement("div");
+	options.style["-moz-column-count"] = 1;
+	options.style["-webkit-column-count"] = 1;
+	options.style["column-count"] = 1;
+	options.style.width = "100%";
+	options.style.float = "left";
+
+	options.appendChild(makeNumber("setAutoClickRate", "CPS during gold rain", "45px", clickRate, 0, 30, updateAutoClickRate));
+	options.appendChild(makeCheckBox("purchaseUpgradeToggle", "Auto upgrade items", purchaseUpgradeToggle, toggleAutoUpgrade));
+
+	info_box.appendChild(options);
+}
+
+function makeCheckBox(name, desc, state, listener) {
+	var label= document.createElement("label");
+	var description = document.createTextNode(desc);
+	var checkbox = document.createElement("input");
+
+	checkbox.type = "checkbox";
+	checkbox.name = name;
+	checkbox.checked = state;
+	checkbox.onclick = listener;
+	window[checkbox.name] = checkbox.checked;
+
+	label.appendChild(checkbox);
+	label.appendChild(description);
+	
+	label.appendChild(document.createElement("br"));
+	return label;
+}
+
+function makeNumber(name, desc, width, value, min, max, listener) {
+	var label= document.createElement("label");
+	var description = document.createTextNode(desc);
+	var number = document.createElement("input");
+
+	number.type = "number";
+	number.name = name;
+	number.style.width = width;
+	number.style.marginRight = "5px";
+	number.value = value;
+	number.min = min;
+	number.max = max;
+	number.onchange = listener;
+	number.addEventListener("keypress", function (evt) {
+		if (evt.which === 13)
+			number.onchange();
+		else if (evt.which < 48 || evt.which > 57)
+			evt.preventDefault();
+	});
+	window[number.name] = number;
+
+	label.appendChild(number);
+	label.appendChild(description);
+	label.appendChild(document.createElement("br"));
+	return label;
+}
+
+function handleCheckBox(event) {
+	var checkbox = event.target;
+
+	window[checkbox.name] = checkbox.checked;
+	return checkbox.checked;
+}
+
+function updateAutoClickRate(event) {
+	if(event !== undefined && event.target.value != "") {
+
+		var val = event.target.value;
+		if (val > event.target.max)
+			clickRate = event.target.max;
+		else if (val < event.target.min)
+			clickRate = event.target.min;
+		else
+			clickRate = val;
+		console.log('Click rate is now ' + clickRate);
+	}
+}
+
+function toggleAutoUpgrade(event) {
+	if(event !== undefined) {
+		purchaseUpgradeToggle = handleCheckBox(event);
 	}
 }
 
