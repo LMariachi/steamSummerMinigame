@@ -166,7 +166,7 @@ function doTheThing() {
 			if (clickRate > 0) {
 				startGoldRainClick();
 			}
-		}catch(e)
+		} catch (e)
 		{
 			console.log("Something went wrong. Don't worry, we'll keep running.");
 			console.log("Error: " + e);
