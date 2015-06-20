@@ -155,7 +155,8 @@ function doTheThing() {
 			}
 		} catch (e) {
 			console.log("An error occurred, but we'll keep running.");
-			console.log(e);
+			console.log("Error: " + e);
+                }        
 //			useNapalmIfRelevant();
 			useTacticalNukeIfRelevant();
 			useCrippleSpawnerIfRelevant();
@@ -166,13 +167,11 @@ function doTheThing() {
 			if (clickRate > 0) {
 				startGoldRainClick();
 			}
-		} catch (e)
-		{
-			console.log("Something went wrong. Don't worry, we'll keep running.");
-			console.log("Error: " + e);
-		}
-
-		isAlreadyRunning = false;
+		} catch (e) {
+                        console.log("Error! " + e);
+                }        
+		
+                isAlreadyRunning = false;
 	}
 }
 
